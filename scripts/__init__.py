@@ -1,2 +1,2 @@
-from car import *
-from track import *
+from .car import *
+from .track import *
