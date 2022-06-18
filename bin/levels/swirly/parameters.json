@@ -1,0 +1,10 @@
+{
+    "height": 800,
+    "width": 1000,
+    "start": {
+        "x": 250,
+        "y": 710,
+        "direction": 160
+    },
+    "checkpoints": 28
+}
