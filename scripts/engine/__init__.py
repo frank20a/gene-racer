@@ -83,7 +83,7 @@ class Engine:
         
         # LiDaRs are drawn on top of the cars
         self.cleanup_rects = []
-        car = sorted(self.cars)[0]
+        car = sorted(self.cars)[-1]
         for l, r in zip(car.lidars, car.measurement):
             l = (l + np.pi * car.a / 180) % (2 * np.pi)
             tmp = pg.draw.line(self.screen, (3, 152, 252), (car.x, car.y), (r * np.sin(l) + car.x, r * np.cos(l) + car.y))

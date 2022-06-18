@@ -8,7 +8,7 @@ class ScoreText(pg.sprite.Sprite):
         self.rect = pg.rect.Rect(0, 0, 0, 0)
         
     def update(self):
-        self.image = self.parent.arial20.render(f"Score: {sorted(self.parent.cars)[0].score}", True, (255, 255, 255))
+        self.image = self.parent.arial20.render(f"Score: {sorted(self.parent.cars)[-1].score:.1f}", True, (255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.topleft = (15, 15)
     

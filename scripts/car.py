@@ -44,6 +44,7 @@ class Car(pg.sprite.Sprite):
         self.lidars = lidars
         self.measurement = np.zeros(len(lidars))
         self.name = hex(randrange(1048576, 16777215))[2:]
+        self.cycles = int(os.environ['EPOCH_CYCLES'])
         
         # Reset
         self.rot = False
@@ -70,6 +71,12 @@ class Car(pg.sprite.Sprite):
         
     def update(self):
         if not self.alive: return
+        
+        self.score -= float(os.environ['POINT_DEC'])
+        self.cycles -= 1
+        if self.cycles <= 0:
+            self.lose()
+            return
         
         # Update velocity
         if not self.lin:

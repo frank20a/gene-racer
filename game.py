@@ -12,6 +12,8 @@ if __name__ == "__main__":
     os.environ['LIN_VEL'] = "5"
     os.environ['LIN_ACC'] = "0.1"
     os.environ['LIN_DEC'] = "0.08"
+    os.environ['POINT_DEC'] = '0.005'
+    os.environ['EPOCH_CYCLES'] = '5000'
 
     # Create app and run it
     Engine("track", player='computer', n_cars=10).mainloop()
