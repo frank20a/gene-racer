@@ -52,6 +52,7 @@ class Car(pg.sprite.Sprite):
         self.alive = True
         self.score = 0
         self.checkpoints = []
+        self.finish_flag = False
         
         # Get image
         self.img = pg.image.load(os.path.join(os.environ['GAME_DIR'], f'bin\images\car.png'))
@@ -62,9 +63,13 @@ class Car(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (self.x, self.y)
     
-    def lose(self, msg: str = ''):
+    def lose(self, msg: str = None):
         self.alive = False
-        self.info(f'LOSE ({msg}) {self.score:.2f}')
+        
+        if msg is None:
+            self.info(f'LOSE {self.score:.2f}')
+        else:
+            self.info(f'LOSE ({msg}) {self.score:.2f}')
     
     def info(self, msg):
         print(f'[{self.name}] - {msg}')
@@ -72,10 +77,10 @@ class Car(pg.sprite.Sprite):
     def update(self):
         if not self.alive: return
         
-        self.score -= float(os.environ['POINT_DEC'])
+        self.score = max(0, self.score - float(os.environ['POINT_DEC']))
         self.cycles -= 1
         if self.cycles <= 0:
-            self.lose()
+            self.lose("GLOBAL TIMEOUT")
             return
         
         # Update velocity
@@ -101,41 +106,49 @@ class Car(pg.sprite.Sprite):
         self.a = (self.a + self.va) % 360
         self.rot = False
         
+        # Update sprite
         self.image = pg.transform.rotate(self.img.convert(), self.a)
         self.rect = self.image.get_rect()
         self.rect.center = (self.x, self.y)
-        px = hex_colour(self.parent.track.bounds[int(self.y), int(self.x)])
         
+        # Handle bound-map
+        px = hex_colour(self.parent.track.bounds[int(self.y), int(self.x)])
         if px == '000000':
             self.handle_out_of_bounds()
         elif px == '00ff00':
             self.handle_finish_line()
         elif px == 'ffffff':
             self.handle_road()
-        elif px not in self.checkpoints:
+        else:
             self.handle_checkpoint(px)
             
         self.measure_lidar()
     
     def handle_finish_line(self):
+        if self.finish_flag:
+            return
+        
         if len(self.checkpoints) >= self.parent.track.checkpoints:
             self.score += 20
             self.checkpoints = []
             # self.alive = False
             self.info(f'Finish Line {self.score:.2f}')
         else:
-            self.score -= 5
-            self.lose(f'{self.checkpoints} {self.parent.track.checkpoints}')
+            self.score = max(0, self.score - 5)
+            self.lose(f'FINISHED W/ NOT ENOUGH CHECKPOINTS {len(self.checkpoints)}/{self.parent.track.checkpoints}')
+        
+        self.finish_flag = True
     
     def handle_out_of_bounds(self):
-        self.lose()
+        self.lose("OUT OF BOUNDS")
     
     def handle_road(self):
-        pass
+        self.finish_flag = False
     
     def handle_checkpoint(self, checkpoint):
-        self.checkpoints.append(checkpoint)
-        self.score += 1
+        if checkpoint not in self.checkpoints:
+            self.checkpoints.append(checkpoint)
+            self.score += 1
     
     def left(self):
         self.rot = True
@@ -185,7 +198,7 @@ class Car(pg.sprite.Sprite):
     def __str__(self):
         return self.brain.name
 
-    def __int__(self):
+    def __float__(self):
         return self.score
 
 
@@ -224,8 +237,7 @@ class ComputerCar(Car):
         super().update()
             
         if self.life <= 0: 
-            self.alive = False
-            self.info(f'OUT OF TIME {self.score:.2f}')
+            self.lose(f'TIMEOUT')
             return
     
     def copy(self):

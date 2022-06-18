@@ -82,11 +82,11 @@ class Brain:
         if filename is None:
             filename = f'brain_{self.name}'
         
-        with open(os.path.join(os.environ['GAME_DIR'], f'/bin/{filename}.json'), 'w') as f:
-            json.dump({'i': self.i, 'n': self.n, 'ds': self.ds, 'o': self.o, 'weights': self.weights, 'biases': self.biases}, f)
+        with open(os.path.join(os.environ['GAME_DIR'], f'bin/brains/{filename}.json'), 'w') as f:
+            json.dump({'i': self.i, 'n': self.n, 'ds': self.ds, 'o': self.o, 'weights': [i.tolist() for i in self.weights], 'biases': [i.tolist() for i in self.biases]}, f)
             
     def load(self, filename: str):
-        with open(os.path.join(os.environ['GAME_DIR'], f'/bin/{filename}.json'), 'r') as f:
+        with open(os.path.join(os.environ['GAME_DIR'], f'bin/brains/{filename}.json'), 'r') as f:
             data = json.load(f)
             self.i = data['i']
             self.n = data['n']

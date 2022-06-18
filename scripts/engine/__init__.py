@@ -6,7 +6,7 @@ import os
 
 class Engine:
     pg.font.init()
-    arial20 = pg.font.SysFont('arial', 20)
+    font1 = pg.font.SysFont('calibri', 26, bold=True)
     
     def __init__(self, level: str, n_cars: int = 1, player: str = 'player'):
         super().__init__()
@@ -25,6 +25,7 @@ class Engine:
         self.background.blit(self.track.texture.convert(), (0, 0))
         self.screen.blit(self.background, (0, 0))
         self.clock = pg.time.Clock()
+        self.prev_best = ('------', 0)
         
         if self.player == 'player':
             self.cars = [PlayerCar(self) for _ in range(n_cars)]
@@ -37,6 +38,7 @@ class Engine:
         self.txt_sprites = pg.sprite.Group(ScoreText(self))
         if self.player == 'computer':
             EpochText(self).add(self.txt_sprites)
+            BestScoreText(self).add(self.txt_sprites)
             print(f"================ EPOCH {self.epoch} =================")
     
     def mainloop(self):
@@ -68,16 +70,24 @@ class Engine:
         elif self.player == 'computer':            
             if all(not car.alive for car in self.cars):
                 self.epoch += 1
-                self.cars.sort()
-                champion = self.cars[-1]
+                
+                champion = sorted(self.cars)[-1]
+                self.prev_best = (champion.name, champion.score)
                 tmp = [champion.copy()]
-                min, max = self.cars[0].score, self.cars[-1].score
+                tmp[-1].name = champion.name
                 
                 # Create new cars
+                s = sum([car.score for car in self.cars])
                 for _ in range(len(self.cars) - 1):
-                    c = np.random.randint(min*1000, max*1000) / 1000
+                    c = 0
+                    try:
+                        r = np.random.randint(0, s)
+                    except ValueError:
+                        print([car.score for car in self.cars])
+                        return
                     for car in self.cars:
-                        if car.score > c:
+                        c += car.score
+                        if c >= r:
                             tmp.append(car.copy_mutated(float(os.environ['MUTATION_RATE'])))
                             break
                 
@@ -110,7 +120,7 @@ class Engine:
         self.car_sprites.draw(self.screen)
         
         # LiDaRs are drawn on top of the cars
-        car = sorted(self.cars, key = lambda x: x.score)[-1]
+        car = sorted(self.cars, key = lambda x: x.score if x.alive else -1)[-1]
         for l, r in zip(car.lidars, car.measurement):
             l = (l + np.pi * car.a / 180) % (2 * np.pi)
             pg.draw.line(self.screen, (3, 152, 252), (car.x, car.y), (r * np.sin(l) + car.x, r * np.cos(l) + car.y))
@@ -119,6 +129,6 @@ class Engine:
 
     def cleanup(self):
         champion = sorted(self.cars)[-1]
-        champion.brain.save(f'{self.track.name}-{self.epoch}-{champion.name}.json')
+        champion.brain.save(f'{self.track.name}-{self.epoch - 1}-{champion.name}')
         
         pg.quit()

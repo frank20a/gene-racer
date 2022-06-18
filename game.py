@@ -12,9 +12,9 @@ if __name__ == '__main__':
     os.environ['LIN_VEL'] = '5'
     os.environ['LIN_ACC'] = '0.1'
     os.environ['LIN_DEC'] = '0.08'
-    os.environ['POINT_DEC'] = '0.005'
-    os.environ['EPOCH_CYCLES'] = '5000'
-    os.environ['MUTATION_RATE'] = '0.01'
+    os.environ['POINT_DEC'] = '0.002'
+    os.environ['EPOCH_CYCLES'] = '1800'
+    os.environ['MUTATION_RATE'] = '0.05'
 
     # Create app and run it
-    Engine('swirly', player='computer', n_cars=25).mainloop()
+    Engine('swirly', player='computer', n_cars=30).mainloop()
