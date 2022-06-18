@@ -10,14 +10,12 @@ class Track:
         # Setters
         self.name = name
         
-        self.level_dir = os.path.join(os.environ['GAME_DIR'], f'levels\{self.name}')
+        self.level_dir = os.path.join(os.environ['GAME_DIR'], f'bin\levels\{self.name}')
         
         # =============== Read level data ===============
-        # Bounds map
-        cap = cv.VideoCapture(os.path.join(self.level_dir, 'bounds.gif'))
-        _, self.bounds = cap.read()
-        cap.release()      
-        self.bounds = np.asarray(self.bounds, dtype=np.uint8)[:,:,2]
+        # Ream images
+        self.texture = pg.image.load(os.path.join(self.level_dir, 'texture.png'))   
+        self.bounds = np.asarray(cv.imread(os.path.join(self.level_dir, 'bounds.png')), dtype=np.uint8)
         
         # Parameters
         with open(os.path.join(self.level_dir, 'parameters.json'), 'r') as f:
@@ -25,6 +23,3 @@ class Track:
             self.h, self.w = tmp['height'], tmp['width']
             self.start_pos = tmp['start']
             self.checkpoints = tmp['checkpoints']
-        
-        # Track texture
-        self.texture = pg.image.load(os.path.join(self.level_dir, 'texture.png'))
