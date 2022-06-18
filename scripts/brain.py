@@ -33,7 +33,7 @@ class Brain:
 
     def calculate(self, inputs: np.ndarray) -> np.ndarray:
         if inputs.shape[0] != self.i:
-            raise ValueError("Inputs must be of shape ({},)".format(self.i))
+            raise ValueError('Inputs must be of shape ({},)'.format(self.i))
         
         res = np.matmul(inputs, self.weights[0]) + self.biases[0]
         for i in range(self.n - 1):
@@ -55,7 +55,7 @@ class Brain:
 
     def crossover(self, other: 'Brain', keep_rate: float = 0.5) -> 'Brain':
         if self.i != other.i or self.n != other.n or self.o != other.o:
-            raise ValueError("Brains must be of same shape")
+            raise ValueError('Brains must be of same shape')
         
         child = Brain(self.i, self.n, self.ds, self.o)
         for i in range(self.n):
@@ -68,24 +68,29 @@ class Brain:
         return child
 
     def copy(self) -> 'Brain':
-        res = Brain(self.i, self.n, self.ds, self.o)
+        res = Brain(self.name, self.i, self.n, self.ds, self.o)
         res.weights = deepcopy(self.weights)
         res.biases = deepcopy(self.biases)
         return res
 
+    def copy_mutated(self, mutation_rate: float) -> 'Brain':
+        res = self.copy()
+        res.mutate(mutation_rate)
+        return res
+    
     def save(self, filename: str = None):
         if filename is None:
             filename = f'brain_{self.name}'
         
-        with open(os.path.join(os.environ['GAME_DIR'], f"/bin/{filename}.json"), "w") as f:
-            json.dump({"i": self.i, "n": self.n, "ds": self.ds, "o": self.o, "weights": self.weights, "biases": self.biases}, f)
+        with open(os.path.join(os.environ['GAME_DIR'], f'/bin/{filename}.json'), 'w') as f:
+            json.dump({'i': self.i, 'n': self.n, 'ds': self.ds, 'o': self.o, 'weights': self.weights, 'biases': self.biases}, f)
             
     def load(self, filename: str):
-        with open(os.path.join(os.environ['GAME_DIR'], f"/bin/{filename}.json"), "r") as f:
+        with open(os.path.join(os.environ['GAME_DIR'], f'/bin/{filename}.json'), 'r') as f:
             data = json.load(f)
-            self.i = data["i"]
-            self.n = data["n"]
-            self.ds = data["ds"]
-            self.o = data["o"]
-            self.weights = np.array(data["weights"], dtype=np.float64)
-            self.biases = np.array(data["biases"], dtype=np.float64)
+            self.i = data['i']
+            self.n = data['n']
+            self.ds = data['ds']
+            self.o = data['o']
+            self.weights = np.array(data['weights'], dtype=np.float64)
+            self.biases = np.array(data['biases'], dtype=np.float64)

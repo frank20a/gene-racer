@@ -62,9 +62,9 @@ class Car(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (self.x, self.y)
     
-    def lose(self):
+    def lose(self, msg: str = ''):
         self.alive = False
-        self.info(f"LOSE {self.score}")
+        self.info(f'LOSE ({msg}) {self.score:.2f}')
     
     def info(self, msg):
         print(f'[{self.name}] - {msg}')
@@ -101,13 +101,10 @@ class Car(pg.sprite.Sprite):
         self.a = (self.a + self.va) % 360
         self.rot = False
         
-        # print(self.x, self.y, self.a, self.vx, self.va)
-        
         self.image = pg.transform.rotate(self.img.convert(), self.a)
         self.rect = self.image.get_rect()
         self.rect.center = (self.x, self.y)
         px = hex_colour(self.parent.track.bounds[int(self.y), int(self.x)])
-        # print(px)
         
         if px == '000000':
             self.handle_out_of_bounds()
@@ -121,13 +118,14 @@ class Car(pg.sprite.Sprite):
         self.measure_lidar()
     
     def handle_finish_line(self):
-        if self.score == self.parent.track.checkpoints:
+        if len(self.checkpoints) >= self.parent.track.checkpoints:
             self.score += 20
             self.checkpoints = []
             # self.alive = False
-            self.info(f"Finish Line {self.score}")
+            self.info(f'Finish Line {self.score:.2f}')
         else:
-            self.lose()
+            self.score -= 5
+            self.lose(f'{self.checkpoints} {self.parent.track.checkpoints}')
     
     def handle_out_of_bounds(self):
         self.lose()
@@ -170,7 +168,6 @@ class Car(pg.sprite.Sprite):
             res.append(r)
         
         self.measurement = np.array(res)
-        # print(self.measurement)
         return
     
     def __lt__(self, other):
@@ -191,8 +188,9 @@ class Car(pg.sprite.Sprite):
     def __int__(self):
         return self.score
 
+
 class ComputerCar(Car):
-    def __init__(self, parent, brain: Brain = None, deadline: int = 250):    
+    def __init__(self, parent, brain: Brain = None, deadline: int = 150):    
         super().__init__(parent)
         
         self.deadline = deadline
@@ -200,6 +198,8 @@ class ComputerCar(Car):
         
         if brain is None:
             self.brain = Brain(self.name, len(self.lidars), 3, [12, 6, 4], 4)
+        else:
+            self.brain = brain
     
     def handle_checkpoint(self, checkpoint):
         super().handle_checkpoint(checkpoint)
@@ -211,7 +211,6 @@ class ComputerCar(Car):
         self.life -= 1
         
         resp = self.brain.calculate(self.measurement)
-        # print(resp)
         if resp[0] > resp[1] > 0.2:
             self.forward()
         elif resp[1] > resp[0] > 0.2:
@@ -226,8 +225,14 @@ class ComputerCar(Car):
             
         if self.life <= 0: 
             self.alive = False
-            self.info("OUT OF TIME")
+            self.info(f'OUT OF TIME {self.score:.2f}')
             return
+    
+    def copy(self):
+        return ComputerCar(self.parent, self.brain.copy(), self.deadline)
+    
+    def copy_mutated(self, mutation_rate: float):
+        return ComputerCar(self.parent, self.brain.copy_mutated(mutation_rate), self.deadline)
     
     
 class PlayerCar(Car):

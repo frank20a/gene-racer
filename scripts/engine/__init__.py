@@ -1,12 +1,12 @@
 import pygame as pg
 from scripts import ComputerCar, PlayerCar, Track
-from scripts.text import ScoreText
+from scripts.text import *
 import numpy as np
-from scripts.lidar import LidarsSprite
+import os
 
 class Engine:
     pg.font.init()
-    arial20 = pg.font.SysFont("arial", 20)
+    arial20 = pg.font.SysFont('arial', 20)
     
     def __init__(self, level: str, n_cars: int = 1, player: str = 'player'):
         super().__init__()
@@ -16,7 +16,7 @@ class Engine:
         self.track = Track(level)
         self.w, self.h = self.track.w, self.track.h
         self.player = player
-        pg.display.set_caption(f"Gene Racer - {self.track.name}")
+        pg.display.set_caption(f'Gene Racer - {self.track.name}')
         # self.logo = pg.image.load(os.path.join(os.environ['GAME_DIR'], f'engine\images\logo32x32.png'))
         # pg.display.set_icon(self.logo)
         self.screen = pg.display.set_mode((self.w, self.h))
@@ -30,11 +30,14 @@ class Engine:
             self.cars = [PlayerCar(self) for _ in range(n_cars)]
         elif self.player == 'computer':
             self.cars = [ComputerCar(self) for _ in range(n_cars)]
-            self.epoch = 0
+            self.epoch = 1
         
         # Sprites
-        self.sprites = pg.sprite.RenderUpdates(self.cars)
-        ScoreText(self).add(self.sprites)
+        self.car_sprites = pg.sprite.Group(self.cars)
+        self.txt_sprites = pg.sprite.Group(ScoreText(self))
+        if self.player == 'computer':
+            EpochText(self).add(self.txt_sprites)
+            print(f"================ EPOCH {self.epoch} =================")
     
     def mainloop(self):
         self.running = True
@@ -62,35 +65,60 @@ class Engine:
             if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:    self.cars[0].right()
             if keys[pg.K_UP]    and not keys[pg.K_DOWN]:    self.cars[0].forward()
             if keys[pg.K_DOWN]  and not keys[pg.K_UP]:      self.cars[0].backward()
-        elif self.player == 'computer':
-            pass
+        elif self.player == 'computer':            
+            if all(not car.alive for car in self.cars):
+                self.epoch += 1
+                self.cars.sort()
+                champion = self.cars[-1]
+                tmp = [champion.copy()]
+                min, max = self.cars[0].score, self.cars[-1].score
+                
+                # Create new cars
+                for _ in range(len(self.cars) - 1):
+                    c = np.random.randint(min*1000, max*1000) / 1000
+                    for car in self.cars:
+                        if car.score > c:
+                            tmp.append(car.copy_mutated(float(os.environ['MUTATION_RATE'])))
+                            break
+                
+                for car in tmp:
+                    car.kill()
+                self.car_sprites.empty()
+                del self.cars[:]
+                
+                self.screen.blit(self.background, (0, 0))
+                pg.display.flip()
+                
+                self.cars = tmp.copy()
+                del tmp[:]
+                
+                self.car_sprites.add(self.cars)
+                print(f"================ EPOCH {self.epoch} =================")
+                        
         
-        self.sprites.update()
+        self.car_sprites.update()
+        self.txt_sprites.update()
         
         self.clock.tick(60)
     
     def draw(self):
         # Clear screen
-        try:
-            for rect in self.cleanup_rects:
-                self.screen.blit(self.background, rect, rect)
-        except:
-            pass
-        self.sprites.clear(self.screen, self.background)
+        self.screen.blit(self.background, (0, 0))
         
         # Draw sprites
-        dirty = self.sprites.draw(self.screen)
+        self.txt_sprites.draw(self.screen)
+        self.car_sprites.draw(self.screen)
         
         # LiDaRs are drawn on top of the cars
-        self.cleanup_rects = []
-        car = sorted(self.cars)[-1]
+        car = sorted(self.cars, key = lambda x: x.score)[-1]
         for l, r in zip(car.lidars, car.measurement):
             l = (l + np.pi * car.a / 180) % (2 * np.pi)
-            tmp = pg.draw.line(self.screen, (3, 152, 252), (car.x, car.y), (r * np.sin(l) + car.x, r * np.cos(l) + car.y))
-            dirty.append(tmp)
-            self.cleanup_rects.append(tmp)
+            pg.draw.line(self.screen, (3, 152, 252), (car.x, car.y), (r * np.sin(l) + car.x, r * np.cos(l) + car.y))
             
-        pg.display.update(dirty)
+        pg.display.flip()
 
     def cleanup(self):
+        champion = sorted(self.cars)[-1]
+        champion.brain.save(f'{self.track.name}-{self.epoch}-{champion.name}.json')
+        
         pg.quit()
