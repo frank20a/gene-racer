@@ -3,6 +3,7 @@ import numpy as np
 from numpy import pi
 import pygame as pg
 from .brain import Brain
+from random import randrange
 
 
 LIDAR_ANGLES = (
@@ -16,9 +17,10 @@ LIDAR_ANGLES = (
     5*pi/3,   # Back-right 1
     4*pi/3,   # Back-left 1
 )
-abs = lambda x: x if x >= 0 else -x
-sgn = lambda x: x / abs(x)
 
+abs = lambda x: x if x >= 0 else -x
+
+sgn = lambda x: x / abs(x)
 
 def bound(x, min_val, max_val):
     return max(min(x, max_val), min_val)
@@ -27,6 +29,7 @@ def hex_colour(x):
     return f'{hex(x[0])[2:]:0<2}{hex(x[1])[2:]:0<2}{hex(x[2])[2:]:0<2}'
 
 cyl2cart = lambda cyl: np.array([cyl[0] * np.cos(cyl[1]), cyl[0] * np.sin(cyl[1]), cyl[2]])
+
 
 class Car(pg.sprite.Sprite):
     def __init__(self, parent, lidars: tuple = LIDAR_ANGLES):
@@ -40,6 +43,7 @@ class Car(pg.sprite.Sprite):
         self.w, self.h = parent.w, parent.h
         self.lidars = lidars
         self.measurement = np.zeros(len(lidars))
+        self.name = hex(randrange(1048576, 16777215))[2:]
         
         # Reset
         self.rot = False
@@ -56,6 +60,13 @@ class Car(pg.sprite.Sprite):
         self.image = pg.transform.rotate(self.img.convert(), self.a)
         self.rect = self.image.get_rect()
         self.rect.center = (self.x, self.y)
+    
+    def lose(self):
+        self.alive = False
+        self.info(f"LOSE {self.score}")
+    
+    def info(self, msg):
+        print(f'[{self.name}] - {msg}')
         
     def update(self):
         if not self.alive: return
@@ -83,7 +94,7 @@ class Car(pg.sprite.Sprite):
         self.a = (self.a + self.va) % 360
         self.rot = False
         
-        print(self.x, self.y, self.a, self.vx, self.va)
+        # print(self.x, self.y, self.a, self.vx, self.va)
         
         self.image = pg.transform.rotate(self.img.convert(), self.a)
         self.rect = self.image.get_rect()
@@ -103,14 +114,16 @@ class Car(pg.sprite.Sprite):
         self.measure_lidar()
     
     def handle_finish_line(self):
-        self.score += 20
-        self.checkpoints = []
-        # self.alive = False
-        print("WIN")
+        if self.score == self.parent.track.checkpoints:
+            self.score += 20
+            self.checkpoints = []
+            # self.alive = False
+            self.info(f"Finish Line {self.score}")
+        else:
+            self.lose()
     
     def handle_out_of_bounds(self):
-        self.alive = False
-        print("LOSE")
+        self.lose()
     
     def handle_road(self):
         pass
@@ -152,7 +165,7 @@ class Car(pg.sprite.Sprite):
         self.measurement = np.array(res)
         # print(self.measurement)
         return
-
+    
     def __lt__(self, other):
         return self.score < other.score
     
@@ -165,15 +178,21 @@ class Car(pg.sprite.Sprite):
     def __ge__(self, other):
         return self.score >= other.score
         
+    def __str__(self):
+        return self.brain.name
+
+    def __int__(self):
+        return self.score
+
 class ComputerCar(Car):
-    def __init__(self, parent, brain: Brain = None, deadline: int = 100):    
+    def __init__(self, parent, brain: Brain = None, deadline: int = 250):    
         super().__init__(parent)
         
         self.deadline = deadline
         self.life = deadline
         
         if brain is None:
-            self.brain = Brain(len(self.lidars), 3, [8, 4, 4], 4)
+            self.brain = Brain(self.name, len(self.lidars), 3, [12, 6, 4], 4)
     
     def handle_checkpoint(self, checkpoint):
         super().handle_checkpoint(checkpoint)
@@ -186,22 +205,23 @@ class ComputerCar(Car):
         
         resp = self.brain.calculate(self.measurement)
         # print(resp)
-        if resp[0] > resp[1]:
+        if resp[0] > resp[1] > 0.2:
             self.forward()
-        else:
+        elif resp[1] > resp[0] > 0.2:
             self.backward()
         
-        if resp[2] > resp[3] > 0.25:
+        if resp[2] > resp[3] > 0.2:
             self.left()
-        elif resp[3] > resp[2] > 0.25:
+        elif resp[3] > resp[2] > 0.2:
             self.right()
             
         super().update()
             
         if self.life <= 0: 
             self.alive = False
-            print("OUT OF TIME")
+            self.info("OUT OF TIME")
             return
+    
     
 class PlayerCar(Car):
     def update(self):

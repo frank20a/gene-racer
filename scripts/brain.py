@@ -1,7 +1,6 @@
 import numpy as np
 from copy import deepcopy
 import json, os
-from random import randrange
 
 
 sigmoid = lambda x: 1 / (1 + np.exp(-x/100))
@@ -9,12 +8,12 @@ relu = lambda x: np.maximum(0, x)
 
 
 class Brain:
-    def __init__(self, inputs: int, inner_layers: int, inner_dims: list, outputs: int):
+    def __init__(self, name: str, inputs: int, inner_layers: int, inner_dims: list, outputs: int):
         self.i = inputs
         self.n = inner_layers
         self.ds = inner_dims
         self.o = outputs
-        self.name = hex(randrange(1048576, 16777215))[2:]
+        self.name = name
         
         self.weights = []
         self.biases = []
@@ -36,9 +35,9 @@ class Brain:
         if inputs.shape[0] != self.i:
             raise ValueError("Inputs must be of shape ({},)".format(self.i))
         
-        res = sigmoid(np.matmul(inputs, self.weights[0]) + self.biases[0])
+        res = np.matmul(inputs, self.weights[0]) + self.biases[0]
         for i in range(self.n - 1):
-            res = sigmoid(np.matmul(res, self.weights[i+1]) + self.biases[i+1])
+            res = relu(np.matmul(res, self.weights[i+1]) + self.biases[i+1])
             
         return sigmoid(np.matmul(res, self.weights[-1]) + self.biases[-1])
 
